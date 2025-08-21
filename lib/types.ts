@@ -3,12 +3,11 @@ export interface Item {
   name: string
   description: string
   category: string
-  categoryId: string
-  imageUrl?: string
-  status: "available" | "in_use" | "overdue" | "in_process" | "reserved"
-  currentUserId?: string
-  createdAt: string
-  updatedAt: string
+  category_id: string
+  image_url?: string
+  status: "disponivel" | "em_uso" | "em_atraso" | "em_processo" | "reservado"
+  created_at: string
+  updated_at: string
 }
 
 export interface Category {
@@ -24,25 +23,63 @@ export interface User {
   role: "admin" | "user"
 }
 
+export interface Profile {
+  id: string
+  name: string
+  email: string
+  role: "admin" | "user"
+  created_at: string
+}
+
 export interface Movement {
   id: string
-  itemId: string
-  userId: string
-  action: "checkout" | "return"
-  condition: "normal" | "defect"
-  defectDescription?: string
-  photoUrls: string[]
-  startedAt: string
-  returnedAt?: string
+  item_id: string
+  user_id: string
+  type: "uso" | "devolucao"
+  condition: "normal" | "defeito"
+  condition_description?: string
+  photos: string[]
+  created_at: string
 }
 
 export interface Reservation {
   id: string
-  itemId: string
-  userId: string
-  startTime: string
-  endTime: string
-  status: "active" | "completed" | "cancelled"
-  createdAt: string
-  updatedAt: string
+  item_id: string
+  user_id: string
+  start_time: string
+  end_time: string
+  status: "ativa" | "concluida" | "cancelada"
+  created_at: string
+}
+
+export interface Database {
+  public: {
+    Tables: {
+      categories: {
+        Row: Category
+        Insert: Omit<Category, "id">
+        Update: Partial<Omit<Category, "id">>
+      }
+      items: {
+        Row: Item
+        Insert: Omit<Item, "id" | "created_at" | "updated_at">
+        Update: Partial<Omit<Item, "id" | "created_at" | "updated_at">>
+      }
+      profiles: {
+        Row: Profile
+        Insert: Omit<Profile, "created_at">
+        Update: Partial<Omit<Profile, "id" | "created_at">>
+      }
+      movements: {
+        Row: Movement
+        Insert: Omit<Movement, "id" | "created_at">
+        Update: Partial<Omit<Movement, "id" | "created_at">>
+      }
+      reservations: {
+        Row: Reservation
+        Insert: Omit<Reservation, "id" | "created_at">
+        Update: Partial<Omit<Reservation, "id" | "created_at">>
+      }
+    }
+  }
 }

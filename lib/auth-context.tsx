@@ -2,87 +2,128 @@
 
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
-import type { User } from "./types"
+import { createClient } from "@/lib/supabase/client"
+import type { User } from "@supabase/supabase-js"
+import type { Profile } from "./types"
 
 interface AuthContextType {
   user: User | null
-  login: (email: string, password: string) => Promise<boolean>
-  logout: () => void
+  profile: Profile | null
+  signIn: (email: string, password: string) => Promise<{ error: any }>
+  signUp: (email: string, password: string, name: string, role?: string) => Promise<{ error: any }>
+  signOut: () => Promise<void>
   isLoading: boolean
   isAdmin: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// Mock users for demonstration
-const mockUsers: User[] = [
-  {
-    id: "admin-1",
-    email: "admin@brinquedoteca.com",
-    name: "Administrador",
-    role: "admin",
-  },
-  {
-    id: "user-1",
-    email: "usuario@brinquedoteca.com",
-    name: "João Silva",
-    role: "user",
-  },
-  {
-    id: "user-2",
-    email: "maria@brinquedoteca.com",
-    name: "Maria Santos",
-    role: "user",
-  },
-]
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const supabase = createClient()
 
   useEffect(() => {
-    // Check for stored user session
-    const storedUser = localStorage.getItem("brinquedoteca_user")
-    if (storedUser) {
+    const getInitialSession = async () => {
       try {
-        setUser(JSON.parse(storedUser))
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession()
+
+        if (error) {
+          console.error("Error getting session:", error)
+          setIsLoading(false)
+          return
+        }
+
+        setUser(session?.user ?? null)
+
+        if (session?.user) {
+          await fetchProfile(session.user.id)
+        }
       } catch (error) {
-        console.error("Error parsing stored user:", error)
-        localStorage.removeItem("brinquedoteca_user")
+        console.error("Error in getInitialSession:", error)
+      } finally {
+        setIsLoading(false)
       }
     }
-    setIsLoading(false)
+
+    getInitialSession()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setUser(session?.user ?? null)
+
+      if (session?.user) {
+        await fetchProfile(session.user.id)
+      } else {
+        setProfile(null)
+      }
+
+      setIsLoading(false)
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    setIsLoading(true)
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
 
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    // Mock authentication - in real app, this would be an API call
-    const foundUser = mockUsers.find((u) => u.email === email)
-
-    if (foundUser && password === "123456") {
-      // Simple mock password
-      setUser(foundUser)
-      localStorage.setItem("brinquedoteca_user", JSON.stringify(foundUser))
-      setIsLoading(false)
-      return true
+      if (error) throw error
+      setProfile(data)
+    } catch (error) {
+      console.error("Error fetching profile:", error)
     }
-
-    setIsLoading(false)
-    return false
   }
 
-  const logout = () => {
-    setUser(null)
-    localStorage.removeItem("brinquedoteca_user")
+  const signIn = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+      return { error }
+    } catch (error) {
+      console.error("Error in signIn:", error)
+      return { error }
+    }
   }
 
-  const isAdmin = user?.role === "admin"
+  const signUp = async (email: string, password: string, name: string, role = "user") => {
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || window.location.origin,
+          data: {
+            name,
+            role,
+          },
+        },
+      })
+      return { error }
+    } catch (error) {
+      console.error("Error in signUp:", error)
+      return { error }
+    }
+  }
 
-  return <AuthContext.Provider value={{ user, login, logout, isLoading, isAdmin }}>{children}</AuthContext.Provider>
+  const signOut = async () => {
+    await supabase.auth.signOut()
+  }
+
+  const isAdmin = profile?.role === "admin"
+
+  return (
+    <AuthContext.Provider value={{ user, profile, signIn, signUp, signOut, isLoading, isAdmin }}>
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth() {

@@ -2,9 +2,9 @@
 
 import { useAuth } from "@/lib/auth-context"
 import { LoginPage } from "@/components/login-page"
+import { Sidebar } from "@/components/sidebar"
 import { LibraryHeader } from "@/components/library-header"
 import { ItemGrid } from "@/components/item-grid"
-import { SideMenu } from "@/components/side-menu"
 import { AddItemButton } from "@/components/add-item-button"
 
 export default function HomePage() {
@@ -27,10 +27,10 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <SideMenu />
-      <div className="flex flex-col">
+      <Sidebar />
+      <div className="md:ml-64">
         <LibraryHeader />
-        <main className="flex-1 p-4 md:p-6">
+        <main className="p-4 md:p-6">
           <ItemGrid />
         </main>
         <AddItemButton />
