@@ -26,28 +26,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const getInitialSession = async () => {
-      try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      setUser(session?.user ?? null)
 
-        if (error) {
-          console.error("Error getting session:", error)
-          setIsLoading(false)
-          return
-        }
-
-        setUser(session?.user ?? null)
-
-        if (session?.user) {
-          await fetchProfile(session.user.id)
-        }
-      } catch (error) {
-        console.error("Error in getInitialSession:", error)
-      } finally {
-        setIsLoading(false)
+      if (session?.user) {
+        await fetchProfile(session.user.id)
       }
+
+      setIsLoading(false)
     }
 
     getInitialSession()
@@ -81,36 +69,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signIn = async (email: string, password: string) => {
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-      return { error }
-    } catch (error) {
-      console.error("Error in signIn:", error)
-      return { error }
-    }
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+    return { error }
   }
 
   const signUp = async (email: string, password: string, name: string, role = "user") => {
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || window.location.origin,
-          data: {
-            name,
-            role,
-          },
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || window.location.origin,
+        data: {
+          name,
+          role,
         },
-      })
-      return { error }
-    } catch (error) {
-      console.error("Error in signUp:", error)
-      return { error }
-    }
+      },
+    })
+    return { error }
   }
 
   const signOut = async () => {
