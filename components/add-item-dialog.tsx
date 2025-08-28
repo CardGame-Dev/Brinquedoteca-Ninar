@@ -1,66 +1,180 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { mockCategories } from "@/lib/mock-data"
-import { Upload } from "lucide-react"
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { fetchCategories } from "@/lib/mock-data"; // Importa a função para buscar categorias
+import { Upload } from "lucide-react";
+import { supabase } from "@/lib/supabase/client";
 
+// Declarar tipos
 interface AddItemDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  isEditMode?: boolean;
+  itemToEdit?: {
+    id: string;
+    name: string;
+    description: string;
+    categoryId: string;
+    status: string;
+    cityId: string;
+    roomId: string;
+  };
+  onItemChanged?: () => Promise<void>;
 }
 
-export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
+export function AddItemDialog({ open, onOpenChange, isEditMode, itemToEdit, onItemChanged }: AddItemDialogProps) {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     categoryId: "",
-    status: "available",
-  })
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+    status: "disponivel",
+    cityId: "",
+    roomId: "",
+  });
+  const [categories, setCategories] = useState<any[]>([]);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [cities, setCities] = useState<any[]>([]);
+  const [rooms, setRooms] = useState<any[]>([]);
+
+  // Preenche os campos ao abrir em modo edição
+  useEffect(() => {
+    if (isEditMode && itemToEdit && open) {
+      setFormData({
+        name: itemToEdit.name || "",
+        description: itemToEdit.description || "",
+        categoryId: itemToEdit.categoryId || "",
+        status: itemToEdit.status || "disponivel",
+        cityId: itemToEdit.cityId || "",
+        roomId: itemToEdit.roomId || "",
+      });
+      // Se quiser lidar com imagem, adicione aqui
+    } else if (!isEditMode && open) {
+      setFormData({
+        name: "",
+        description: "",
+        categoryId: "",
+        status: "available",
+        cityId: "",
+        roomId: "",
+      });
+      setImageFile(null);
+    }
+  }, [isEditMode, itemToEdit, open]);
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      const data = await fetchCategories();
+      setCategories(data || []);
+    };
+    loadCategories();
+  }, []);
+
+  useEffect(() => {
+    const loadCities = async () => {
+      const { data } = await supabase.from("cities").select("*");
+      setCities(data || []);
+    };
+    loadCities();
+  }, []);
+
+  useEffect(() => {
+    const loadRooms = async () => {
+      const { data } = await supabase.from("rooms").select("*");
+      setRooms(data || []);
+    };
+    loadRooms();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    setIsLoading(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    if (isEditMode && itemToEdit) {
+      // Atualizar item existente
+      const { error } = await supabase
+        .from("items")
+        .update({
+          name: formData.name,
+          description: formData.description,
+          category_id: formData.categoryId,
+          status: formData.status,
+          city_id: formData.cityId,
+          rooms_id: formData.roomId,
+        })
+        .eq("id", itemToEdit.id);
 
-    console.log("Adicionando item:", formData, imageFile)
+      if (error) {
+        alert("Erro ao atualizar item: " + error.message);
+        setIsLoading(false);
+        return;
+      }
+      // Chame a função de atualização da lista, se recebida
+      if (onItemChanged) await onItemChanged();
+    } else {
+      // Criar novo item
+      const { error } = await supabase
+        .from("items")
+        .insert([
+          {
+            name: formData.name,
+            description: formData.description,
+            category_id: formData.categoryId,
+            status: formData.status,
+            city_id: formData.cityId,
+            rooms_id: formData.roomId,
+          },
+        ]);
 
-    // Reset form
+      if (error) {
+        alert("Erro ao adicionar item: " + error.message);
+        setIsLoading(false);
+        return;
+      }
+      if (onItemChanged) await onItemChanged();
+    }
+
     setFormData({
       name: "",
       description: "",
       categoryId: "",
       status: "available",
-    })
-    setImageFile(null)
-    setIsLoading(false)
-    onOpenChange(false)
-  }
+      cityId: "",
+      roomId: "",
+    });
+    setImageFile(null);
+    setIsLoading(false);
+    onOpenChange(false);
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+    const file = e.target.files?.[0];
     if (file) {
-      setImageFile(file)
+      setImageFile(file);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Adicionar Novo Brinquedo</DialogTitle>
-        </DialogHeader>
+    <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle>
+          {isEditMode ? "Editar Brinquedo" : "Adicionar Novo Brinquedo"}
+        </DialogTitle>
+        <DialogDescription>
+          {isEditMode
+            ? "Altere as informações do brinquedo e clique em salvar."
+            : "Preencha os dados para adicionar um novo brinquedo."}
+        </DialogDescription>
+      </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -84,7 +198,7 @@ export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
                 <SelectValue placeholder="Selecione uma categoria" />
               </SelectTrigger>
               <SelectContent>
-                {mockCategories.map((category) => (
+                {categories.map((category) => (
                   <SelectItem key={category.id} value={category.id}>
                     {category.name}
                   </SelectItem>
@@ -111,9 +225,53 @@ export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="available">Disponível</SelectItem>
-                <SelectItem value="in_use">Em Uso</SelectItem>
-                <SelectItem value="reserved">Reservado</SelectItem>
+                <SelectItem value="disponivel">Disponível</SelectItem>
+                <SelectItem value="em_uso">Em Uso</SelectItem>
+                <SelectItem value="em_atraso">Em Atraso</SelectItem>
+                <SelectItem value="em_processo">Em Processo</SelectItem>
+                <SelectItem value="reservado">Reservado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="city">Cidade *</Label>
+            <Select
+              value={formData.cityId}
+              onValueChange={(value) =>
+                setFormData({ ...formData, cityId: value, roomId: "" })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma cidade" />
+              </SelectTrigger>
+              <SelectContent>
+                {cities.map((city) => (
+                  <SelectItem key={city.id_city} value={city.id_city}>
+                    {city.name_city} - {city.uf}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="room">Sala *</Label>
+            <Select
+              value={formData.roomId}
+              onValueChange={(value) => setFormData({ ...formData, roomId: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma sala" />
+              </SelectTrigger>
+              <SelectContent>
+                {rooms
+                  .filter((room) => room.city_id === formData.cityId)
+                  .map((room) => (
+                    <SelectItem key={room.id_room} value={room.id_room}>
+                      {room.name_room}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
@@ -159,5 +317,5 @@ export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

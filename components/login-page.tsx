@@ -38,7 +38,7 @@ export function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 text-6xl">🧸</div>
-          <CardTitle className="text-2xl">Brinquedoteca</CardTitle>
+          <CardTitle className="text-2xl">Controle de Estoque</CardTitle>
           <CardDescription>Sistema de Controle de Estoque</CardDescription>
         </CardHeader>
 

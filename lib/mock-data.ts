@@ -1,3 +1,4 @@
+/*
 import type { Item, Category } from "./types"
 
 export const mockCategories: Category[] = [
@@ -79,3 +80,41 @@ export const mockItems: Item[] = [
     updatedAt: "2024-01-15T10:00:00Z",
   },
 ]
+*/
+
+
+import { createClient } from "@supabase/supabase-js";
+
+// Inicialize o cliente do Supabase
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+// Função para buscar categorias do Supabase
+export const fetchCategories = async () => {
+  const { data, error } = await supabase.from("categories").select("*");
+
+  if (error) {
+    console.error("Erro ao buscar categorias do Supabase:", error);
+    return [];
+  }
+
+  return data;
+};
+
+// Função para buscar itens do Supabase
+export const fetchItems = async () => {
+  const { data, error } = await supabase.from("items").select("*");
+
+  if (error) {
+    console.error("Erro ao buscar itens do Supabase:", error);
+    return [];
+  }
+
+  return data;
+};
+
+// Exemplo de uso: exportar os dados como promessas
+export const mockCategories = fetchCategories();
+export const mockItems = fetchItems();

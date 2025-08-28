@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { supabase } from "@/lib/supabase/client"
 import type { User } from "@supabase/supabase-js"
 import type { Profile } from "./types"
 
@@ -22,7 +22,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const supabase = createClient()
 
   useEffect(() => {
     const getInitialSession = async () => {
@@ -58,15 +57,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const fetchProfile = async (userId: string) => {
+    console.log("Fetching profile for userId:", userId);
     try {
-      const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
+      const { data, error } = await supabase.from("users").select("*").eq("id", userId).single();
 
-      if (error) throw error
-      setProfile(data)
+      if (error) {
+        console.error("Error fetching profile:", error.message, error.details, error.hint);
+        throw error;
+      }
+
+      console.log("Profile fetched:", data); // Adicione este log
+      setProfile(data);
     } catch (error) {
-      console.error("Error fetching profile:", error)
+      console.error("Error fetching profile:", error);
     }
-  }
+  };
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
@@ -96,6 +101,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const isAdmin = profile?.role === "admin"
+
+  console.log("Usuário:", user);
+  console.log("É administrador:", isAdmin);
 
   return (
     <AuthContext.Provider value={{ user, profile, signIn, signUp, signOut, isLoading, isAdmin }}>

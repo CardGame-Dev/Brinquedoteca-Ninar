@@ -1,18 +1,31 @@
-"use client"
+"use client";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { mockCategories } from "@/lib/mock-data"
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { fetchCategories } from "@/lib/mock-data"; // Importa a função para buscar categorias
 
 interface FilterDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export function FilterDialog({ open, onOpenChange }: FilterDialogProps) {
+  const [categories, setCategories] = useState<any[]>([]); // Estado para armazenar as categorias
+
+  // Carregar categorias ao montar o componente
+  useEffect(() => {
+    const loadCategories = async () => {
+      const data = await fetchCategories(); // Resolve a Promise para obter as categorias
+      setCategories(data || []); // Atualiza o estado com as categorias
+    };
+
+    loadCategories();
+  }, []);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -34,7 +47,7 @@ export function FilterDialog({ open, onOpenChange }: FilterDialogProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as categorias</SelectItem>
-                {mockCategories.map((category) => (
+                {categories.map((category) => (
                   <SelectItem key={category.id} value={category.id}>
                     {category.name}
                   </SelectItem>
@@ -70,5 +83,5 @@ export function FilterDialog({ open, onOpenChange }: FilterDialogProps) {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

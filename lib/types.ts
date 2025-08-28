@@ -5,9 +5,12 @@ export interface Item {
   category: string
   category_id: string
   image_url?: string
-  status: "disponivel" | "em_uso" | "em_atraso" | "em_processo" | "reservado"
+  status: "available" | "in_use" | "overdue" | "in_process" | "reserved";
   created_at: string
   updated_at: string
+  city_id: string;    // adicione este campo
+  rooms_id: string;   // adicione este campo
+  currentUserId?: string | null; // Adiciona a propriedade currentUserId
 }
 
 export interface Category {

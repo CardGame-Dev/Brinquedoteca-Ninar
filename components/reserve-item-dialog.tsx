@@ -1,58 +1,69 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Clock } from "lucide-react"
-import { mockItems } from "@/lib/mock-data"
-import { useAuth } from "@/lib/auth-context"
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Clock } from "lucide-react";
+import { fetchItems } from "@/lib/mock-data"; // Importa a função para buscar itens
+import { useAuth } from "@/lib/auth-context";
 
 interface ReserveItemDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  preselectedItemId?: string
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  preselectedItemId?: string;
 }
 
 export function ReserveItemDialog({ open, onOpenChange, preselectedItemId }: ReserveItemDialogProps) {
-  const { user } = useAuth()
-  const [selectedItemId, setSelectedItemId] = useState(preselectedItemId || "")
-  const [date, setDate] = useState("")
-  const [startTime, setStartTime] = useState("")
-  const [endTime, setEndTime] = useState("")
-  const [error, setError] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
+  const { user } = useAuth();
+  const [items, setItems] = useState<any[]>([]); // Estado para armazenar os itens
+  const [selectedItemId, setSelectedItemId] = useState(preselectedItemId || "");
+  const [date, setDate] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Calculate end time automatically (start time + 4 hours)
+  // Carregar itens ao montar o componente
+  useEffect(() => {
+    const loadItems = async () => {
+      const data = await fetchItems(); // Resolve a Promise para obter os itens
+      setItems(data || []); // Atualiza o estado com os itens
+    };
+
+    loadItems();
+  }, []);
+
+  // Calcular horário de devolução automaticamente (horário de retirada + 4 horas)
   const calculateEndTime = (startTimeValue: string) => {
-    if (!startTimeValue) return ""
+    if (!startTimeValue) return "";
 
-    const [hours, minutes] = startTimeValue.split(":").map(Number)
-    const startDate = new Date()
-    startDate.setHours(hours, minutes, 0, 0)
+    const [hours, minutes] = startTimeValue.split(":").map(Number);
+    const startDate = new Date();
+    startDate.setHours(hours, minutes, 0, 0);
 
-    const endDate = new Date(startDate.getTime() + 4 * 60 * 60 * 1000) // Add 4 hours
+    const endDate = new Date(startDate.getTime() + 4 * 60 * 60 * 1000); // Adiciona 4 horas
 
-    return `${endDate.getHours().toString().padStart(2, "0")}:${endDate.getMinutes().toString().padStart(2, "0")}`
-  }
+    return `${endDate.getHours().toString().padStart(2, "0")}:${endDate.getMinutes().toString().padStart(2, "0")}`;
+  };
 
   const handleStartTimeChange = (value: string) => {
-    setStartTime(value)
-    setEndTime(calculateEndTime(value))
-  }
+    setStartTime(value);
+    setEndTime(calculateEndTime(value));
+  };
 
   const checkReservationConflict = (
     itemId: string,
     selectedDate: string,
     selectedStartTime: string,
-    selectedEndTime: string,
+    selectedEndTime: string
   ) => {
-    // Mock conflict check - in real app, this would be an API call
+    // Mock para verificar conflitos - em uma aplicação real, isso seria uma chamada à API
     const mockReservations = [
       {
         itemId: "2",
@@ -60,7 +71,7 @@ export function ReserveItemDialog({ open, onOpenChange, preselectedItemId }: Res
         startTime: "10:00",
         endTime: "14:00",
       },
-    ]
+    ];
 
     return mockReservations.some(
       (reservation) =>
@@ -68,31 +79,31 @@ export function ReserveItemDialog({ open, onOpenChange, preselectedItemId }: Res
         reservation.date === selectedDate &&
         ((selectedStartTime >= reservation.startTime && selectedStartTime < reservation.endTime) ||
           (selectedEndTime > reservation.startTime && selectedEndTime <= reservation.endTime) ||
-          (selectedStartTime <= reservation.startTime && selectedEndTime >= reservation.endTime)),
-    )
-  }
+          (selectedStartTime <= reservation.startTime && selectedEndTime >= reservation.endTime))
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setIsLoading(true)
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
 
     if (!selectedItemId || !date || !startTime) {
-      setError("Por favor, preencha todos os campos obrigatórios")
-      setIsLoading(false)
-      return
+      setError("Por favor, preencha todos os campos obrigatórios");
+      setIsLoading(false);
+      return;
     }
 
-    // Check for conflicts
-    const hasConflict = checkReservationConflict(selectedItemId, date, startTime, endTime)
+    // Verificar conflitos
+    const hasConflict = checkReservationConflict(selectedItemId, date, startTime, endTime);
     if (hasConflict) {
-      setError("O item não está disponível para o horário selecionado. Tente outro horário.")
-      setIsLoading(false)
-      return
+      setError("O item não está disponível para o horário selecionado. Tente outro horário.");
+      setIsLoading(false);
+      return;
     }
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    // Simular chamada à API
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     console.log("Criando reserva:", {
       itemId: selectedItemId,
@@ -100,19 +111,19 @@ export function ReserveItemDialog({ open, onOpenChange, preselectedItemId }: Res
       date,
       startTime,
       endTime,
-    })
+    });
 
-    // Reset form
-    setSelectedItemId("")
-    setDate("")
-    setStartTime("")
-    setEndTime("")
-    setError("")
-    setIsLoading(false)
-    onOpenChange(false)
-  }
+    // Resetar formulário
+    setSelectedItemId("");
+    setDate("");
+    setStartTime("");
+    setEndTime("");
+    setError("");
+    setIsLoading(false);
+    onOpenChange(false);
+  };
 
-  const availableItems = mockItems.filter((item) => item.status === "available")
+  const availableItems = items.filter((item) => item.status === "available");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -200,5 +211,5 @@ export function ReserveItemDialog({ open, onOpenChange, preselectedItemId }: Res
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

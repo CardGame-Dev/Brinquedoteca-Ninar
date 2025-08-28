@@ -1,46 +1,48 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Play, RotateCcw, Edit, Trash2, Eye, Calendar } from "lucide-react"
-import type { Item } from "@/lib/types"
-import { useAuth } from "@/lib/auth-context"
-import { useState } from "react"
-import { UseItemDialog } from "./use-item-dialog"
-import { ReturnItemDialog } from "./return-item-dialog"
-import { ItemDetailsDialog } from "./item-details-dialog"
-import { AddItemDialog } from "./add-item-dialog"
-import { ReserveItemDialog } from "./reserve-item-dialog"
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Play, RotateCcw, Edit, Trash2, Eye, Calendar } from "lucide-react";
+import type { Item } from "@/lib/types";
+import { useAuth } from "@/lib/auth-context";
+import { useState } from "react";
+import { UseItemDialog } from "./use-item-dialog";
+import { ReturnItemDialog } from "./return-item-dialog";
+import { ItemDetailsDialog } from "./item-details-dialog";
+import { AddItemDialog } from "./add-item-dialog";
+import { ReserveItemDialog } from "./reserve-item-dialog";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import { supabase } from "@/lib/supabase/client";
+import { statusConfig, statusMapping } from "@/lib/item-status"; // NOVO IMPORT
 
 interface ItemCardProps {
-  item: Item
+  item: Item;
+  onItemChanged?: () => Promise<void>;
 }
 
-const statusConfig = {
-  available: { label: "Disponível", variant: "default" as const, color: "bg-green-500" },
-  in_use: { label: "Em Uso", variant: "secondary" as const, color: "bg-blue-500" },
-  overdue: { label: "Em Atraso", variant: "destructive" as const, color: "bg-red-500" },
-  in_process: { label: "Em Processo", variant: "outline" as const, color: "bg-yellow-500" },
-  reserved: { label: "Reservado", variant: "outline" as const, color: "bg-purple-500" },
-}
+export function ItemCard({ item, onItemChanged }: ItemCardProps) {
+  const statusKey = statusMapping[item.status];
+  const status = statusKey
+    ? statusConfig[statusKey]
+    : { label: "Desconhecido", variant: "default", color: "bg-gray-500" };
+  const { user, isAdmin } = useAuth() || { user: null, isAdmin: false };
+  const isCurrentUserUsing = item.currentUserId && user?.id ? item.currentUserId === user.id : false;
 
-export function ItemCard({ item }: ItemCardProps) {
-  const status = statusConfig[item.status]
-  const { user, isAdmin } = useAuth()
-  const isCurrentUserUsing = item.currentUserId === user?.id
+  const [showUseDialog, setShowUseDialog] = useState(false);
+  const [showReturnDialog, setShowReturnDialog] = useState(false);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showReserveDialog, setShowReserveDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
-  const [showUseDialog, setShowUseDialog] = useState(false)
-  const [showReturnDialog, setShowReturnDialog] = useState(false)
-  const [showDetailsDialog, setShowDetailsDialog] = useState(false)
-  const [showEditDialog, setShowEditDialog] = useState(false)
-  const [showReserveDialog, setShowReserveDialog] = useState(false)
-
-  const handleDelete = () => {
-    if (confirm("Tem certeza que deseja excluir este brinquedo?")) {
-      console.log("Excluindo item:", item.id)
-    }
-  }
+  const handleDelete = async () => {
+    // Aqui faz a exclusão no Supabase
+    await supabase.from("items").delete().eq("id", item.id);
+    setShowDeleteDialog(false);
+    if (onItemChanged) await onItemChanged();
+  };
 
   return (
     <>
@@ -50,8 +52,8 @@ export function ItemCard({ item }: ItemCardProps) {
             className="aspect-square bg-muted rounded-lg mb-3 overflow-hidden cursor-pointer"
             onClick={() => setShowDetailsDialog(true)}
           >
-            {item.imageUrl ? (
-              <img src={item.imageUrl || "/placeholder.svg"} alt={item.name} className="w-full h-full object-cover" />
+            {item.image_url ? (
+              <img src={item.image_url || "/placeholder.svg"} alt={item.name} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                 <span className="text-4xl">🧸</span>
@@ -70,9 +72,10 @@ export function ItemCard({ item }: ItemCardProps) {
               <div className={`w-3 h-3 rounded-full ${status.color} flex-shrink-0 mt-0.5`} />
             </div>
 
-            <p className="text-xs text-muted-foreground line-clamp-1">{item.category}</p>
+            {/* Não precisa mais mostrar o nome da categoria aqui, a não ser que queira duplicar a busca */}
+            {/* <p className="text-xs text-muted-foreground line-clamp-1">{categoryName || "Carregando..."}</p> */}
 
-            <Badge variant={status.variant} className="text-xs">
+            <Badge variant={status.variant as "default" | "secondary" | "destructive" | "outline"} className="text-xs">
               {status.label}
             </Badge>
           </div>
@@ -108,13 +111,13 @@ export function ItemCard({ item }: ItemCardProps) {
             </Button>
           )}
 
-          <Button size="sm" variant="ghost" className="px-2" onClick={() => setShowDetailsDialog(true)}>
+          <Button size="sm" variant="ghost" className="px-2" onClick={() => setShowDetailsDialog(true)} title="Visualizar">
             <Eye className="h-3 w-3" />
           </Button>
 
           {isAdmin && (
             <>
-              <Button size="sm" variant="ghost" className="px-2" onClick={() => setShowEditDialog(true)}>
+              <Button size="sm" variant="ghost" className="px-2" onClick={() => setShowEditDialog(true)} title="Editar">
                 <Edit className="h-3 w-3" />
               </Button>
 
@@ -122,20 +125,54 @@ export function ItemCard({ item }: ItemCardProps) {
                 size="sm"
                 variant="ghost"
                 className="px-2 text-destructive hover:text-destructive"
-                onClick={handleDelete}
+                onClick={() => setShowDeleteDialog(true)}
+                title="Excluir"
               >
                 <Trash2 className="h-3 w-3" />
               </Button>
+
+              <ConfirmDeleteDialog
+                open={showDeleteDialog}
+                onCancel={() => setShowDeleteDialog(false)}
+                onConfirm={handleDelete}
+                itemName={item.name}
+              />
             </>
           )}
         </CardFooter>
       </Card>
 
-      <UseItemDialog open={showUseDialog} onOpenChange={setShowUseDialog} item={item} />
+      <UseItemDialog
+        open={showUseDialog}
+        onOpenChange={(open) => {
+          setShowUseDialog(open);
+          if (!open) onItemChanged?.();
+        }}
+        item={item}
+        onSuccess={onItemChanged}
+      />
       <ReturnItemDialog open={showReturnDialog} onOpenChange={setShowReturnDialog} item={item} />
-      <ItemDetailsDialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog} item={item} />
-      <AddItemDialog open={showEditDialog} onOpenChange={setShowEditDialog} />
+      <ItemDetailsDialog
+        open={showDetailsDialog}
+        onOpenChange={setShowDetailsDialog}
+        item={item}
+      />
+      <AddItemDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        isEditMode={true}
+        itemToEdit={{
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          categoryId: item.category_id,
+          status: item.status,
+          cityId: item.city_id,
+          roomId: item.rooms_id, // Mapeamentos realizados no Types.ts
+        }}
+        onItemChanged={onItemChanged}
+      />
       <ReserveItemDialog open={showReserveDialog} onOpenChange={setShowReserveDialog} preselectedItemId={item.id} />
     </>
-  )
+  );
 }

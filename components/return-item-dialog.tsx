@@ -79,7 +79,7 @@ export function ReturnItemDialog({ open, onOpenChange, item }: ReturnItemDialogP
         <div className="space-y-4">
           <div className="p-4 bg-muted rounded-lg">
             <p className="text-sm text-muted-foreground">Usuário</p>
-            <p className="font-medium">{user?.name}</p>
+            
             <p className="text-sm text-muted-foreground mt-2">Item Selecionado</p>
             <p className="font-medium">{item.name}</p>
           </div>
