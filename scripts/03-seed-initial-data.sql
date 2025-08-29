@@ -10,13 +10,13 @@ ON CONFLICT (name) DO NOTHING;
 -- Insert sample items
 INSERT INTO public.items (name, description, category_id, status) VALUES
   ('Quebra-cabeça 1000 peças', 'Quebra-cabeça com paisagem natural', 
-   (SELECT id FROM public.categories WHERE name = 'Educativos'), 'disponivel'),
+   (SELECT id FROM public.categories WHERE name = 'Educativos'), 'Disponível'),
   ('Bola de Futebol', 'Bola oficial para futebol de campo', 
-   (SELECT id FROM public.categories WHERE name = 'Esportivos'), 'disponivel'),
+   (SELECT id FROM public.categories WHERE name = 'Esportivos'), 'Disponível'),
   ('Kit de Pintura', 'Kit completo com tintas e pincéis', 
-   (SELECT id FROM public.categories WHERE name = 'Criativos'), 'disponivel'),
+   (SELECT id FROM public.categories WHERE name = 'Criativos'), 'Disponível'),
   ('Tablet Educativo', 'Tablet com jogos educativos para crianças', 
-   (SELECT id FROM public.categories WHERE name = 'Eletrônicos'), 'disponivel'),
+   (SELECT id FROM public.categories WHERE name = 'Eletrônicos'), 'Disponível'),
   ('Jogo de Xadrez', 'Tabuleiro de xadrez com peças de madeira', 
-   (SELECT id FROM public.categories WHERE name = 'Jogos'), 'disponivel')
+   (SELECT id FROM public.categories WHERE name = 'Jogos'), 'Disponível')
 ON CONFLICT DO NOTHING;

@@ -110,7 +110,7 @@ BEGIN
       ELSIF has_active_reservation THEN
         UPDATE public.items SET status = 'reservado' WHERE id = COALESCE(NEW.item_id, OLD.item_id);
       ELSE
-        UPDATE public.items SET status = 'disponivel' WHERE id = COALESCE(NEW.item_id, OLD.item_id);
+        UPDATE public.items SET status = 'Disponível' WHERE id = COALESCE(NEW.item_id, OLD.item_id);
       END IF;
     END;
   END IF;

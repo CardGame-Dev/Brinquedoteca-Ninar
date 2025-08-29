@@ -14,7 +14,7 @@ export function ItemGrid() {
       console.error("Erro ao buscar itens:", error);
       setItems([]);
     } else {
-      setItems(data || []);
+      setItems(data ? [...data] : []); // força nova referência
     }
   };
 

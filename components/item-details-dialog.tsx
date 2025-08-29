@@ -9,13 +9,14 @@ import { supabase } from "@/lib/supabase/client";
 import type { Item } from "@/lib/types";
 import { useAuth } from "@/lib/auth-context";
 import { UseItemDialog } from "./use-item-dialog";
-import { statusConfig, statusMapping } from "@/lib/item-status";
+import { ReturnItemDialog } from "./return-item-dialog";
+import { statusConfig } from "@/lib/item-status";
 
 interface ItemDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   item: Item | null;
-  onItemChanged?: () => Promise<void>;
+  onItemChanged?: () => void | Promise<void>;
 }
 
 export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: ItemDetailsDialogProps) {
@@ -23,11 +24,11 @@ export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: I
   const [cityName, setCityName] = useState<string | null>(null);
   const [roomName, setRoomName] = useState<string | null>(null);
   const [showUseDialog, setShowUseDialog] = useState(false);
-  const { isAdmin } = useAuth() || { isAdmin: false };
+  const [showReturnDialog, setShowReturnDialog] = useState(false);
+  const { user, isAdmin } = useAuth() || { user: null, isAdmin: false };
 
   useEffect(() => {
     const fetchExtraInfo = async () => {
-      // Categoria
       if (item?.category_id) {
         const { data, error } = await supabase
           .from("categories")
@@ -37,7 +38,6 @@ export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: I
         setCategoryName(error ? "Categoria não encontrada" : data.name);
       }
 
-      // Cidade
       if (item?.city_id) {
         const { data, error } = await supabase
           .from("cities")
@@ -49,7 +49,6 @@ export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: I
         setCityName(null);
       }
 
-      // Sala
       if (item?.rooms_id) {
         const { data, error } = await supabase
           .from("rooms")
@@ -69,14 +68,18 @@ export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: I
 
   if (!item) return null;
 
-  const statusKey = statusMapping[item.status];
-  const status = statusKey
-    ? statusConfig[statusKey]
-    : { label: "Desconhecido", variant: "default", color: "bg-gray-500" };
+  const status = statusConfig[item.status] || { label: "Desconhecido", variant: "default", color: "bg-gray-500" };
+
+  const handleClose = (open: boolean) => {
+    onOpenChange(open);
+    if (!open && onItemChanged) {
+      onItemChanged();
+    }
+  };
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{item.name}</DialogTitle>
@@ -84,7 +87,6 @@ export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: I
           </DialogHeader>
 
           <div className="space-y-6">
-            {/* Item Info */}
             <div className="flex gap-4 items-start">
               <div className="w-24 h-24 bg-muted rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
                 {item.image_url ? (
@@ -103,7 +105,7 @@ export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: I
                   <h3 className="text-lg font-semibold">{item.name}</h3>
                   <Badge
                     variant={status.variant as "default" | "secondary" | "destructive" | "outline"}
-                    className={`${status.color} ${statusKey === "in_use" ? "text-white" : ""}`}
+                    className={`${status.color} ${item.status === "Em Uso" ? "text-white" : ""}`}
                   >
                     {status.label}
                   </Badge>
@@ -127,35 +129,11 @@ export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: I
 
             <Separator />
 
-            {/* Usage History */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="font-medium">Histórico de Utilização</h4>
-                <Button variant="link" size="sm" className="p-0 h-auto">
-                  Mostrar detalhes
-                </Button>
-              </div>
-              {/* Mock data for demonstration */}
-            </div>
-
-            <Separator />
-
-            {/* Related Reservations */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="font-medium">Reservas Relacionadas</h4>
-                <Button variant="link" size="sm" className="p-0 h-auto">
-                  Mostrar detalhes
-                </Button>
-              </div>
-              {/* Mock data for demonstration */}
-            </div>
-
             <div className="flex gap-2 pt-4">
               <Button variant="outline" className="flex-1 bg-transparent" onClick={() => onOpenChange(false)}>
                 Fechar
               </Button>
-              {statusKey === "available" && (
+              {item.status === "Disponível" && (
                 <Button
                   variant="default"
                   className="flex-1"
@@ -164,16 +142,46 @@ export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: I
                   Usar Item
                 </Button>
               )}
+              {item.user_id === user?.id && (
+                <Button
+                  variant="default"
+                  className="flex-1"
+                  onClick={() => setShowReturnDialog(true)}
+                >
+                  Devolver Item
+                </Button>
+              )}
             </div>
           </div>
         </DialogContent>
       </Dialog>
+
       {showUseDialog && (
         <UseItemDialog
           open={showUseDialog}
-          onOpenChange={setShowUseDialog}
+          onOpenChange={(open) => {
+            setShowUseDialog(open);
+            if (!open) {
+              onOpenChange(false);
+              if (onItemChanged) onItemChanged();
+            }
+          }}
           item={item}
           onItemChanged={onItemChanged}
+        />
+      )}
+
+      {showReturnDialog && (
+        <ReturnItemDialog
+          open={showReturnDialog}
+          onOpenChange={(open) => {
+            setShowReturnDialog(open);
+            if (!open) {
+              onOpenChange(false);
+              if (onItemChanged) onItemChanged();
+            }
+          }}
+          item={item}
         />
       )}
     </>

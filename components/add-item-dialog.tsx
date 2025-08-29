@@ -1,7 +1,6 @@
 "use client";
 
 import type React from "react";
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -9,11 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { fetchCategories } from "@/lib/mock-data"; // Importa a função para buscar categorias
-import { Upload } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
+import { Upload } from "lucide-react";
 
-// Declarar tipos
 interface AddItemDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -23,7 +20,7 @@ interface AddItemDialogProps {
     name: string;
     description: string;
     categoryId: string;
-    status: string;
+    status: "Disponível" | "Em Uso" | "Em Atraso" | "Em Processo" | "Reservado";
     cityId: string;
     roomId: string;
   };
@@ -35,7 +32,7 @@ export function AddItemDialog({ open, onOpenChange, isEditMode, itemToEdit, onIt
     name: "",
     description: "",
     categoryId: "",
-    status: "disponivel",
+    status: "Disponível",
     cityId: "",
     roomId: "",
   });
@@ -52,17 +49,16 @@ export function AddItemDialog({ open, onOpenChange, isEditMode, itemToEdit, onIt
         name: itemToEdit.name || "",
         description: itemToEdit.description || "",
         categoryId: itemToEdit.categoryId || "",
-        status: itemToEdit.status || "disponivel",
+        status: itemToEdit.status || "Disponível",
         cityId: itemToEdit.cityId || "",
         roomId: itemToEdit.roomId || "",
       });
-      // Se quiser lidar com imagem, adicione aqui
     } else if (!isEditMode && open) {
       setFormData({
         name: "",
         description: "",
         categoryId: "",
-        status: "available",
+        status: "Disponível",
         cityId: "",
         roomId: "",
       });
@@ -72,7 +68,7 @@ export function AddItemDialog({ open, onOpenChange, isEditMode, itemToEdit, onIt
 
   useEffect(() => {
     const loadCategories = async () => {
-      const data = await fetchCategories();
+      const { data } = await supabase.from("categories").select("*");
       setCategories(data || []);
     };
     loadCategories();
@@ -98,6 +94,26 @@ export function AddItemDialog({ open, onOpenChange, isEditMode, itemToEdit, onIt
     e.preventDefault();
     setIsLoading(true);
 
+    let imageUrl = null;
+
+    // Fazer upload da imagem, se houver
+    if (imageFile) {
+      const fileName = `${Date.now()}-${imageFile.name}`; // Nome único para o arquivo
+      const { data, error: uploadError } = await supabase.storage
+        .from("item-images") // Nome do bucket
+        .upload(fileName, imageFile);
+
+      if (uploadError) {
+        alert("Erro ao fazer upload da imagem: " + uploadError.message);
+        setIsLoading(false);
+        return;
+      }
+
+      // Obter a URL pública da imagem
+      const { data: publicUrlData } = supabase.storage.from("item-images").getPublicUrl(fileName);
+      imageUrl = publicUrlData.publicUrl;
+    }
+
     if (isEditMode && itemToEdit) {
       // Atualizar item existente
       const { error } = await supabase
@@ -109,6 +125,7 @@ export function AddItemDialog({ open, onOpenChange, isEditMode, itemToEdit, onIt
           status: formData.status,
           city_id: formData.cityId,
           rooms_id: formData.roomId,
+          image_url: imageUrl, // Salvar a URL da imagem no banco
         })
         .eq("id", itemToEdit.id);
 
@@ -117,8 +134,9 @@ export function AddItemDialog({ open, onOpenChange, isEditMode, itemToEdit, onIt
         setIsLoading(false);
         return;
       }
-      // Chame a função de atualização da lista, se recebida
-      if (onItemChanged) await onItemChanged();
+      if (onItemChanged) {
+        await onItemChanged(); // Atualiza a lista de itens no componente pai
+      }
     } else {
       // Criar novo item
       const { error } = await supabase
@@ -131,6 +149,7 @@ export function AddItemDialog({ open, onOpenChange, isEditMode, itemToEdit, onIt
             status: formData.status,
             city_id: formData.cityId,
             rooms_id: formData.roomId,
+            image_url: imageUrl, // Salvar a URL da imagem no banco
           },
         ]);
 
@@ -139,14 +158,16 @@ export function AddItemDialog({ open, onOpenChange, isEditMode, itemToEdit, onIt
         setIsLoading(false);
         return;
       }
-      if (onItemChanged) await onItemChanged();
+      if (onItemChanged) {
+        await onItemChanged(); // Atualiza a lista de itens no componente pai
+      }
     }
 
     setFormData({
       name: "",
       description: "",
       categoryId: "",
-      status: "available",
+      status: "Disponível",
       cityId: "",
       roomId: "",
     });
@@ -164,17 +185,15 @@ export function AddItemDialog({ open, onOpenChange, isEditMode, itemToEdit, onIt
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-      <DialogHeader>
-        <DialogTitle>
-          {isEditMode ? "Editar Brinquedo" : "Adicionar Novo Brinquedo"}
-        </DialogTitle>
-        <DialogDescription>
-          {isEditMode
-            ? "Altere as informações do brinquedo e clique em salvar."
-            : "Preencha os dados para adicionar um novo brinquedo."}
-        </DialogDescription>
-      </DialogHeader>
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{isEditMode ? "Editar Brinquedo" : "Adicionar Novo Brinquedo"}</DialogTitle>
+          <DialogDescription>
+            {isEditMode
+              ? "Altere as informações do brinquedo e clique em salvar."
+              : "Preencha os dados para adicionar um novo brinquedo."}
+          </DialogDescription>
+        </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -225,11 +244,11 @@ export function AddItemDialog({ open, onOpenChange, isEditMode, itemToEdit, onIt
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="disponivel">Disponível</SelectItem>
-                <SelectItem value="em_uso">Em Uso</SelectItem>
-                <SelectItem value="em_atraso">Em Atraso</SelectItem>
-                <SelectItem value="em_processo">Em Processo</SelectItem>
-                <SelectItem value="reservado">Reservado</SelectItem>
+                <SelectItem value="Disponível">Disponível</SelectItem>
+                <SelectItem value="Em Uso">Em Uso</SelectItem>
+                <SelectItem value="Em Atraso">Em Atraso</SelectItem>
+                <SelectItem value="Em Processo">Em Processo</SelectItem>
+                <SelectItem value="Reservado">Reservado</SelectItem>
               </SelectContent>
             </Select>
           </div>

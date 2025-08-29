@@ -18,7 +18,7 @@ interface UseItemDialogProps {
   onOpenChange: (open: boolean) => void;
   item: Item | null;
   onSuccess?: () => void;
-  onItemChanged?: () => Promise<void>; // ou () => void
+  onItemChanged?: () => void | Promise<void>; // Permite funções síncronas ou assíncronas
 }
 
 export function UseItemDialog({ open, onOpenChange, item, onSuccess, onItemChanged }: UseItemDialogProps) {
@@ -33,9 +33,7 @@ export function UseItemDialog({ open, onOpenChange, item, onSuccess, onItemChang
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    console.log("item_id:", item?.id);
-    console.log("user_id:", user?.id);
-    console.log("condition:", condition);
+
     if (condition === "defect" && (!defectDescription || photos.length === 0)) {
       alert("Para itens com defeito, é obrigatório descrever o problema e adicionar fotos");
       setIsLoading(false);
@@ -43,21 +41,7 @@ export function UseItemDialog({ open, onOpenChange, item, onSuccess, onItemChang
     }
 
     try {
-      // 1. Upload das fotos (opcional, se quiser salvar no storage e não só o nome)
-      // Aqui só salva os nomes dos arquivos, adapte se quiser salvar as URLs reais
-
-      // 2. Inserir na tabela movements
-      console.log("Movimento enviado:", {
-        item_id: item?.id,
-        user_id: user?.id,
-        condition,
-        condition_description: condition === "normal" ? "normal" : defectDescription,
-        photos: photos.map((photo) => photo.name),
-        created_at: new Date().toISOString(),
-        category_id: item?.category_id,
-        city_id: item?.city_id,
-        room_id: item?.rooms_id,
-      });
+      console.log("Inserindo movimentação...");
       const { error: movementError } = await supabase.from("movements").insert([
         {
           item_id: item?.id,
@@ -73,32 +57,36 @@ export function UseItemDialog({ open, onOpenChange, item, onSuccess, onItemChang
       ]);
 
       if (movementError) {
-        console.error("Erro detalhado do Supabase:", movementError);
-        alert("Erro ao salvar os dados: " + movementError.message);
+        console.error("Erro ao salvar movimentação:", movementError);
         setIsLoading(false);
         return;
       }
-      // 3. Atualizar o status do item e o user_id na tabela items
-      const { error: itemError, data: itemUpdateData } = await supabase
+
+      console.log("Atualizando status do item...");
+      const { error: itemError } = await supabase
         .from("items")
         .update({
           status: "em_uso",
           user_id: user?.id,
         })
         .eq("id", item?.id);
+
       if (itemError) {
-        alert("Erro ao atualizar o status do item.");
+        console.error("Erro ao atualizar status do item:", itemError);
         setIsLoading(false);
         return;
       }
 
-      // Sucesso!
-      if (onItemChanged) await onItemChanged();
+      if (onItemChanged) {
+        console.log("Chamando onItemChanged...");
+        await onItemChanged();
+      } else {
+        console.log("onItemChanged não está definido.");
+      }
+
       setShowSuccessDialog(true);
-      onOpenChange(false);
-      
     } catch (err) {
-      alert("Ocorreu um erro inesperado. Tente novamente.");
+      console.error("Erro inesperado:", err);
     } finally {
       setCondition("normal");
       setDefectDescription("");
@@ -238,7 +226,12 @@ export function UseItemDialog({ open, onOpenChange, item, onSuccess, onItemChang
               Movimentação registrada com sucesso!
             </DialogDescription>
           </DialogHeader>
-          <Button onClick={() => setShowSuccessDialog(false)}>
+          <Button
+            onClick={() => {
+              setShowSuccessDialog(false);
+              onOpenChange(false);
+            }}
+          >
             OK
           </Button>
         </DialogContent>

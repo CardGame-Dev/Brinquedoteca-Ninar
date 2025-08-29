@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS public.items (
   description TEXT,
   category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
   image_url TEXT,
-  status TEXT NOT NULL DEFAULT 'disponivel' CHECK (status IN ('disponivel', 'em_uso', 'em_atraso', 'em_processo', 'reservado')),
+  status TEXT NOT NULL DEFAULT 'Disponível' CHECK (status IN ('Disponível', 'em_uso', 'em_atraso', 'em_processo', 'reservado')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
