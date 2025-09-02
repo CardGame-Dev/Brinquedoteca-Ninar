@@ -6,11 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Play, RotateCcw, Edit, Trash2, Eye, Calendar, ArrowDownCircle } from "lucide-react";
 import type { Item } from "@/lib/types";
 import { useAuth } from "@/lib/auth-context";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { UseItemDialog } from "./use-item-dialog";
 import { ReturnItemDialog } from "./return-item-dialog";
 import { ItemDetailsDialog } from "./item-details-dialog";
-import { AddItemDialog } from "./add-item-dialog";
+import { EditItemDialog } from "./edit-item-dialog"; // Substituído AddItemDialog por EditItemDialog
 import { ReserveItemDialog } from "./reserve-item-dialog";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { supabase } from "@/lib/supabase/client";
@@ -32,6 +32,8 @@ export function ItemCard({ item, onItemChanged }: ItemCardProps) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showReserveDialog, setShowReserveDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [roomName, setRoomName] = useState<string | null>(null);
+  const [cityName, setCityName] = useState<string | null>(null);
 
   const handleDelete = async () => {
     // Aqui faz a exclusão no Supabase
@@ -39,6 +41,30 @@ export function ItemCard({ item, onItemChanged }: ItemCardProps) {
     setShowDeleteDialog(false);
     if (onItemChanged) await onItemChanged();
   };
+
+  useEffect(() => {
+    const fetchRoomName = async () => {
+      const { data } = await supabase.from("rooms").select("name_room").eq("id_room", item.rooms_id).single();
+      if (data) {
+        setRoomName(data.name_room);
+      }
+    };
+
+    const fetchCityName = async () => {
+      const { data } = await supabase.from("cities").select("name_city").eq("id_city", item.city_id).single();
+      if (data) {
+        setCityName(data.name_city);
+      }
+    };
+
+    if (item.rooms_id) {
+      fetchRoomName();
+    }
+
+    if (item.city_id) {
+      fetchCityName();
+    }
+  }, [item.rooms_id, item.city_id]);
 
   return (
     <>
@@ -75,6 +101,18 @@ export function ItemCard({ item, onItemChanged }: ItemCardProps) {
             <Badge variant={status.variant as "default" | "secondary" | "destructive" | "outline"} className="text-xs">
               {status.label}
             </Badge>
+
+            {/* Nome da sala */}
+            <p className="text-xs text-muted-foreground">
+              Sala: {roomName || "Não especificada"}
+            </p>
+
+            {/* Nome da cidade (apenas para admin) */}
+            {isAdmin && (
+              <p className="text-xs text-muted-foreground">
+                Cidade: {cityName || "Não especificada"}
+              </p>
+            )}
           </div>
         </CardContent>
 
@@ -171,10 +209,9 @@ export function ItemCard({ item, onItemChanged }: ItemCardProps) {
         item={item}
         onItemChanged={onItemChanged}
       />
-      <AddItemDialog
+      <EditItemDialog
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
-        isEditMode={true}
         itemToEdit={{
           id: item.id,
           name: item.name,
@@ -183,6 +220,7 @@ export function ItemCard({ item, onItemChanged }: ItemCardProps) {
           status: item.status,
           cityId: item.city_id,
           roomId: item.rooms_id,
+          image_url: item.image_url ?? "",
         }}
         onItemChanged={onItemChanged}
       />

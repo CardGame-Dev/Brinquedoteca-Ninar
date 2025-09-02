@@ -11,6 +11,7 @@ import { useAuth } from "@/lib/auth-context";
 import { UseItemDialog } from "./use-item-dialog";
 import { ReturnItemDialog } from "./return-item-dialog";
 import { statusConfig } from "@/lib/item-status";
+import { User, Clock } from "lucide-react";
 
 interface ItemDetailsDialogProps {
   open: boolean;
@@ -23,6 +24,9 @@ export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: I
   const [categoryName, setCategoryName] = useState<string | null>(null);
   const [cityName, setCityName] = useState<string | null>(null);
   const [roomName, setRoomName] = useState<string | null>(null);
+  const [movements, setMovements] = useState<any[]>([]);
+  const [selectedMovement, setSelectedMovement] = useState<any | null>(null);
+  const [showMovementDetails, setShowMovementDetails] = useState(false);
   const [showUseDialog, setShowUseDialog] = useState(false);
   const [showReturnDialog, setShowReturnDialog] = useState(false);
   const { user, isAdmin } = useAuth() || { user: null, isAdmin: false };
@@ -61,8 +65,23 @@ export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: I
       }
     };
 
+    const fetchMovements = async () => {
+      if (item?.id) {
+        const { data, error } = await supabase
+          .from("movements")
+          .select("id, user_id, condition, condition_description, photos, created_at, type_movement")
+          .eq("item_id", item.id)
+          .order("created_at", { ascending: false });
+
+        if (!error) {
+          setMovements(data || []);
+        }
+      }
+    };
+
     if (open) {
       fetchExtraInfo();
+      fetchMovements();
     }
   }, [item, open]);
 
@@ -83,7 +102,7 @@ export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: I
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{item.name}</DialogTitle>
-            <DialogDescription>{item.description || "Sem descrição disponível."}</DialogDescription>
+            <DialogDescription>{categoryName || "Sem categoria disponível."}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6">
@@ -110,9 +129,9 @@ export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: I
                     {status.label}
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground">
+                {/*<p className="text-sm text-muted-foreground">
                   Categoria: <span className="font-medium text-foreground">{categoryName || "Carregando..."}</span>
-                </p>
+                </p> */}
                 {isAdmin && (
                   <p className="text-sm text-muted-foreground">
                     Cidade: <span className="font-medium text-foreground">{cityName || "Não informado"}</span>
@@ -124,6 +143,47 @@ export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: I
                 {item.description && (
                   <p className="text-xs text-muted-foreground mt-2">{item.description}</p>
                 )}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Histórico de Utilização */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium">Histórico de Utilização</h4>
+              </div>
+              <div className="space-y-2">
+                {movements.map((movement) => (
+                  <div
+                    key={movement.id}
+                    className="flex items-center gap-3 p-3 bg-muted rounded-lg cursor-pointer"
+                    onClick={() => {
+                      setSelectedMovement(movement);
+                      setShowMovementDetails(true);
+                    }}
+                  >
+                    <div className="w-8 h-8 bg-background rounded-full flex items-center justify-center">
+                      {movement.type_movement === "Usado" ? (
+                        <User className="h-4 w-4" />
+                      ) : (
+                        <Clock className="h-4 w-4" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">
+                        {movement.type_movement === "Usado" ? "Retirado por" : "Devolvido por"}{" "}
+                        {movement.user_id || "Usuário desconhecido"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(movement.created_at).toLocaleString("pt-BR")}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      {movement.condition === "normal" ? "Normal" : "Defeito"}
+                    </Badge>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -155,6 +215,50 @@ export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: I
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Detalhes da Movimentação */}
+      {showMovementDetails && selectedMovement && (
+        <Dialog open={showMovementDetails} onOpenChange={setShowMovementDetails}>
+          <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Detalhes da Movimentação</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p>
+                <strong>Usuário:</strong> {selectedMovement.user_id || "Usuário desconhecido"}
+              </p>
+              <p>
+                <strong>Condição:</strong> {selectedMovement.condition === "normal" ? "Normal" : "Defeito"}
+              </p>
+              {selectedMovement.condition_description && (
+                <p>
+                  <strong>Descrição do Defeito:</strong> {selectedMovement.condition_description}
+                </p>
+              )}
+              <p>
+                <strong>Data:</strong>{" "}
+                {new Date(selectedMovement.created_at).toLocaleString("pt-BR")}
+              </p>
+              <p>
+                <strong>Fotos:</strong> {selectedMovement.photos?.length || 0}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {selectedMovement.photos?.map((photo: string, index: number) => (
+                  <img
+                    key={index}
+                    src={photo}
+                    alt={`Foto ${index + 1}`}
+                    className="w-full h-32 object-cover rounded-lg"
+                  />
+                ))}
+              </div>
+            </div>
+            <Button variant="outline" className="mt-4" onClick={() => setShowMovementDetails(false)}>
+              Fechar
+            </Button>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {showUseDialog && (
         <UseItemDialog

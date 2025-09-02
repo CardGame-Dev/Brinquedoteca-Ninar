@@ -11,13 +11,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/lib/supabase/client";
 import { Upload } from "lucide-react";
 
-interface AddItemDialogProps {
+interface EditItemDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  itemToEdit: {
+    id: string;
+    name: string;
+    description: string;
+    categoryId: string;
+    status: "Disponível" | "Em Uso" | "Em Atraso" | "Em Processo" | "Reservado";
+    cityId: string;
+    roomId: string;
+    image_url: string;
+  };
   onItemChanged?: () => Promise<void>;
 }
 
-export function AddItemDialog({ open, onOpenChange, onItemChanged }: AddItemDialogProps) {
+export function EditItemDialog({ open, onOpenChange, itemToEdit, onItemChanged }: EditItemDialogProps) {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -33,20 +43,21 @@ export function AddItemDialog({ open, onOpenChange, onItemChanged }: AddItemDial
   const [cities, setCities] = useState<any[]>([]);
   const [rooms, setRooms] = useState<any[]>([]);
 
+  // Preenche os campos ao abrir o modal
   useEffect(() => {
-    if (open) {
+    if (itemToEdit && open) {
       setFormData({
-        name: "",
-        description: "",
-        categoryId: "",
-        status: "Disponível",
-        cityId: "",
-        roomId: "",
+        name: itemToEdit.name || "",
+        description: itemToEdit.description || "",
+        categoryId: itemToEdit.categoryId || "",
+        status: itemToEdit.status || "Disponível",
+        cityId: itemToEdit.cityId || "",
+        roomId: itemToEdit.roomId || "",
       });
-      setImageFile(null);
-      setPreviewImage(null); // Reseta a pré-visualização ao abrir o modal
+      setPreviewImage(itemToEdit.image_url || null); // Define a imagem de pré-visualização
+      setImageFile(null); // Garante que o estado da imagem não seja sobrescrito
     }
-  }, [open]);
+  }, [itemToEdit, open]);
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -76,9 +87,9 @@ export function AddItemDialog({ open, onOpenChange, onItemChanged }: AddItemDial
     e.preventDefault();
     setIsLoading(true);
 
-    let finalImageUrl = null;
+    let finalImageUrl = previewImage; // Usa a imagem de pré-visualização como padrão
 
-    // Fazer upload da imagem, se houver
+    // Fazer upload da imagem, se houver uma nova
     if (imageFile) {
       const fileName = `${Date.now()}-${imageFile.name}`; // Nome único para o arquivo
       const { data, error: uploadError } = await supabase.storage
@@ -96,23 +107,22 @@ export function AddItemDialog({ open, onOpenChange, onItemChanged }: AddItemDial
       finalImageUrl = publicUrlData.publicUrl;
     }
 
-    // Criar novo item
+    // Atualizar item existente
     const { error } = await supabase
       .from("items")
-      .insert([
-        {
-          name: formData.name,
-          description: formData.description,
-          category_id: formData.categoryId,
-          status: formData.status,
-          city_id: formData.cityId,
-          rooms_id: formData.roomId,
-          image_url: finalImageUrl, // Salvar a URL da imagem no banco
-        },
-      ]);
+      .update({
+        name: formData.name,
+        description: formData.description,
+        category_id: formData.categoryId,
+        status: formData.status,
+        city_id: formData.cityId,
+        rooms_id: formData.roomId,
+        image_url: finalImageUrl, // Salvar a URL da imagem no banco
+      })
+      .eq("id", itemToEdit.id);
 
     if (error) {
-      alert("Erro ao adicionar item: " + error.message);
+      alert("Erro ao atualizar item: " + error.message);
       setIsLoading(false);
       return;
     }
@@ -121,16 +131,6 @@ export function AddItemDialog({ open, onOpenChange, onItemChanged }: AddItemDial
       await onItemChanged(); // Atualiza a lista de itens no componente pai
     }
 
-    setFormData({
-      name: "",
-      description: "",
-      categoryId: "",
-      status: "Disponível",
-      cityId: "",
-      roomId: "",
-    });
-    setImageFile(null);
-    setPreviewImage(null);
     setIsLoading(false);
     onOpenChange(false);
   };
@@ -147,8 +147,8 @@ export function AddItemDialog({ open, onOpenChange, onItemChanged }: AddItemDial
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Adicionar Novo Brinquedo</DialogTitle>
-          <DialogDescription>Preencha os dados para adicionar um novo brinquedo.</DialogDescription>
+          <DialogTitle>Editar Brinquedo</DialogTitle>
+          <DialogDescription>Altere as informações do brinquedo e clique em salvar.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -194,7 +194,7 @@ export function AddItemDialog({ open, onOpenChange, onItemChanged }: AddItemDial
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="status">Status Inicial</Label>
+            <Label htmlFor="status">Status</Label>
             <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
               <SelectTrigger>
                 <SelectValue />
