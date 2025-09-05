@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { LoginPage } from "@/components/login-page"
 import { Sidebar } from "@/components/sidebar"
@@ -9,6 +10,7 @@ import { AddItemButton } from "@/components/add-item-button"
 
 export default function HomePage() {
   const { user, isLoading } = useAuth()
+  const [filters, setFilters] = useState({})
 
   if (isLoading) {
     return (
@@ -29,9 +31,9 @@ export default function HomePage() {
     <div className="min-h-screen bg-background">
       <Sidebar />
       <div className="md:ml-64">
-        <LibraryHeader />
+        <LibraryHeader onApplyFilters={setFilters} />
         <main className="p-4 md:p-6">
-          <ItemGrid />
+          <ItemGrid filters={filters} />
         </main>
         <AddItemButton />
       </div>

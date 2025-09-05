@@ -14,6 +14,7 @@ interface AuthContextType {
   signOut: () => Promise<void>
   isLoading: boolean
   isAdmin: boolean
+  logout: () => void; // Adicione esta linha
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -66,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
 
-      console.log("Profile fetched:", data); // Adicione este log
+      console.log("Profile fetched:", data); // Verifique se o campo `role` está presente
       setProfile(data);
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -100,13 +101,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut()
   }
 
-  const isAdmin = profile?.role === "admin"
+  const logout = async () => {
+    await signOut();
+    window.location.href = "/login"; // ou "/" se preferir redirecionar para a home
+  };
 
+  const isAdmin = profile?.role === "admin"
   console.log("Usuário:", user);
   console.log("É administrador:", isAdmin);
+  console.log("AuthContext - User:", user);
+  console.log("AuthContext - Profile:", profile);
+  console.log("AuthContext - Is Admin:", isAdmin);
 
   return (
-    <AuthContext.Provider value={{ user, profile, signIn, signUp, signOut, isLoading, isAdmin }}>
+    <AuthContext.Provider value={{
+      user,
+      profile,
+      signIn,
+      signUp,
+      signOut,
+      isLoading,
+      isAdmin,
+      logout // adicione aqui
+    }}>
       {children}
     </AuthContext.Provider>
   )

@@ -67,15 +67,40 @@ export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: I
 
     const fetchMovements = async () => {
       if (item?.id) {
-        const { data, error } = await supabase
+        const { data: movementsData, error } = await supabase
           .from("movements")
           .select("id, user_id, condition, condition_description, photos, created_at, type_movement")
           .eq("item_id", item.id)
           .order("created_at", { ascending: false });
 
-        if (!error) {
-          setMovements(data || []);
+        if (error) {
+          console.error("Erro ao buscar movimentos:", error.message);
+          return;
         }
+
+        // Para cada movimentação, buscar o nome do usuário
+        const movementsWithUserNames = await Promise.all(
+          (movementsData || []).map(async (movement) => {
+            if (movement.user_id) {
+              const { data: userData, error: userError } = await supabase
+                .from("users")
+                .select("name")
+                .eq("id", movement.user_id)
+                .single();
+
+              if (userError) {
+                console.error(`Erro ao buscar nome do usuário ${movement.user_id}:`, userError.message);
+                return { ...movement, user_name: "Usuário desconhecido" };
+              }
+
+              return { ...movement, user_name: userData?.name || "Usuário desconhecido" };
+            }
+
+            return { ...movement, user_name: "Usuário desconhecido" };
+          })
+        );
+
+        setMovements(movementsWithUserNames);
       }
     };
 
@@ -94,6 +119,22 @@ export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: I
     if (!open && onItemChanged) {
       onItemChanged();
     }
+  };
+
+  const fetchUserName = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("users")
+      .select("name")
+      .eq("id", userId)
+      .single();
+
+      console.log("Nome do usuário:", data?.name);
+    if (error) {
+      console.error("Erro ao buscar o nome do usuário:", error.message);
+      return "Usuário desconhecido";
+    }
+
+    return data?.name || "Usuário desconhecido";
   };
 
   return (
@@ -158,8 +199,9 @@ export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: I
                   <div
                     key={movement.id}
                     className="flex items-center gap-3 p-3 bg-muted rounded-lg cursor-pointer"
-                    onClick={() => {
-                      setSelectedMovement(movement);
+                    onClick={async () => {
+                      const userName = await fetchUserName(movement.user_id);
+                      setSelectedMovement({ ...movement, user_name: userName });
                       setShowMovementDetails(true);
                     }}
                   >
@@ -173,7 +215,7 @@ export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: I
                     <div className="flex-1">
                       <p className="text-sm font-medium">
                         {movement.type_movement === "Usado" ? "Retirado por" : "Devolvido por"}{" "}
-                        {movement.user_id || "Usuário desconhecido"}
+                        {movement.user_name || "Usuário desconhecido"}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {new Date(movement.created_at).toLocaleString("pt-BR")}
@@ -225,7 +267,7 @@ export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: I
             </DialogHeader>
             <div className="space-y-4">
               <p>
-                <strong>Usuário:</strong> {selectedMovement.user_id || "Usuário desconhecido"}
+                <strong>Usuário:</strong> {selectedMovement.user_name || "Usuário desconhecido"}
               </p>
               <p>
                 <strong>Condição:</strong> {selectedMovement.condition === "normal" ? "Normal" : "Defeito"}
