@@ -2,8 +2,7 @@
 
 import { RotateCcw, Filter, LogOut, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { FilterDialog } from "./filter-dialog"
 import { useAuth } from "@/lib/auth-context"
 import {
@@ -28,17 +27,13 @@ export function LibraryHeader({
   showFilterButton = true,
   title = "Biblioteca",
 }: LibraryHeaderProps) {
-  const [searchTerm, setSearchTerm] = useState("")
+
   const [showFilters, setShowFilters] = useState(false)
   const { user, profile, logout, isAdmin } = useAuth()
 
   const handleRefresh = () => {
     window.location.reload()
   }
-
-  useEffect(() => {
-    onSearch?.(searchTerm)
-  }, [searchTerm])
 
   return (
     <header className="sticky top-0 z-10 bg-background border-b border-border">

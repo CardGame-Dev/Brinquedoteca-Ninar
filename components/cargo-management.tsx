@@ -34,9 +34,9 @@ export function CargoManagement() {
     uf: "",
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [editCity, setEditCity] = useState<City | null>(null);
-  const [editCityForm, setEditCityForm] = useState({ name: "", uf: "" });
-  const [showEditCityDialog, setShowEditCityDialog] = useState(false);
+  const [editCargo, setEditCargo] = useState<Cargo | null>(null);
+  const [editCargoForm, setEditCargoForm] = useState({ name: "", citieId: "", uf: "" });
+  const [showEditCargoDialog, setShowEditCargoDialog] = useState(false);
 
   useEffect(() => {
     fetchCargos();
@@ -51,7 +51,6 @@ export function CargoManagement() {
       if (error) {
         console.error("Erro ao buscar cargos:", error.message);
       } else {
-        console.log("Cargos retornados do Supabase:", data);
         setCargos(data || []);
       }
     } catch (error) {
@@ -94,7 +93,6 @@ export function CargoManagement() {
 
     if (error) {
       alert("Erro ao adicionar cargo: " + error.message);
-      console.error("Erro ao adicionar cargo:", error);
       setIsLoading(false);
       return;
     }
@@ -105,6 +103,60 @@ export function CargoManagement() {
     fetchCargos(); // Atualiza a lista de cargos
   };
 
+  const handleEditCargo = (cargo: Cargo) => {
+    setEditCargo(cargo);
+    setEditCargoForm({
+      name: cargo.name,
+      citieId: cargo.citie,
+      uf: cargo.uf,
+    });
+    setShowEditCargoDialog(true);
+  };
+
+  const handleSaveEditCargo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editCargo) return;
+    console.log("Editando cargo:", editCargo);
+    console.log("Payload:", editCargoForm);
+    console.log("Payload antes do update:", editCargoForm);
+
+    const cargoId = editCargo?.id;
+    const { error, data } = await supabase
+      .from("cargos")
+      .update({
+        name: editCargoForm.name,
+        citie: editCargoForm.citieId,
+        uf: editCargoForm.uf,
+      })
+      .eq("id", cargoId);
+
+    console.log("Resultado do update:", data, error);
+
+    if (error) {
+      console.error("Erro ao editar cargo:", error);
+      alert("Erro ao editar cargo: " + error.message);
+    } else {
+      setShowEditCargoDialog(false);
+      setEditCargo(null);
+      fetchCargos();
+    }
+  };
+
+  const handleDeleteCargo = async (cargoId: string) => {
+    if (confirm("Tem certeza que deseja excluir este cargo?")) {
+      console.log("Excluindo cargo id:", cargoId);
+
+      const { error } = await supabase.from("cargos").delete().eq("id", cargoId);
+
+      if (error) {
+        console.error("Erro ao excluir cargo:", error);
+        alert("Erro ao excluir cargo: " + error.message);
+      } else {
+        fetchCargos();
+      }
+    }
+  };
+
   const handleCityChange = (cityId: string) => {
     const selectedCity = cities.find((city) => city.id === cityId);
     setFormData({
@@ -112,57 +164,6 @@ export function CargoManagement() {
       citieId: cityId, // UUID da cidade
       uf: selectedCity ? selectedCity.uf : "",
     });
-  };
-
-  const handleEditCity = (city: City) => {
-    setEditCity(city);
-    setEditCityForm({ name: city.name, uf: city.uf });
-    setShowEditCityDialog(true);
-  };
-
-  const handleDeleteCity = async (cityId: string) => {
-    if (confirm("Tem certeza que deseja excluir esta cidade?")) {
-      const { error } = await supabase.from("cities").delete().eq("id_city", cityId);
-      if (error) {
-        alert("Erro ao excluir cidade: " + error.message);
-      } else {
-        fetchCities(); // Atualiza a lista após exclusão
-      }
-    }
-  };
-
-  const handleUpdateCity = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editCity) return;
-
-    const { error } = await supabase
-      .from("cities")
-      .update({ name_city: editCityForm.name, uf: editCityForm.uf })
-      .eq("id_city", editCity.id);
-
-    if (error) {
-      alert("Erro ao atualizar cidade: " + error.message);
-      console.error("Erro ao atualizar cidade:", error);
-    } else {
-      setShowEditCityDialog(false);
-      fetchCities(); // Atualiza a lista de cidades
-    }
-  };
-
-  const handleSaveEditCity = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editCity) return;
-    const { error } = await supabase
-      .from("cities")
-      .update({ name_city: editCityForm.name, uf: editCityForm.uf })
-      .eq("id_city", editCity.id);
-    if (error) {
-      alert("Erro ao editar cidade: " + error.message);
-    } else {
-      setShowEditCityDialog(false);
-      setEditCity(null);
-      fetchCities();
-    }
   };
 
   return (
@@ -182,6 +183,7 @@ export function CargoManagement() {
               <thead className="bg-gray-100">
                 <tr>
                   <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Nome</th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Cidade</th>
                   <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">UF</th>
                   <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Ações</th>
                 </tr>
@@ -192,13 +194,14 @@ export function CargoManagement() {
                   return (
                     <tr key={cargo.id} className="border-t">
                       <td className="px-4 py-2 text-sm text-gray-800">{cargo.name}</td>
+                      <td className="px-4 py-2 text-sm text-gray-800">{city ? city.name : cargo.citie}</td>
                       <td className="px-4 py-2 text-sm text-gray-800">{cargo.uf}</td>
                       <td className="px-4 py-2 flex gap-2">
                         <Button
                           size="sm"
                           variant="ghost"
                           title="Editar"
-                          onClick={() => handleEditCity(city!)}
+                          onClick={() => handleEditCargo(cargo)}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -206,7 +209,7 @@ export function CargoManagement() {
                           size="sm"
                           variant="ghost"
                           title="Excluir"
-                          onClick={() => handleDeleteCity(city!.id)}
+                          onClick={() => handleDeleteCargo(cargo.id)}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
@@ -214,45 +217,6 @@ export function CargoManagement() {
                     </tr>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Tabela de Cidades */}
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Cidade</th>
-                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">UF</th>
-                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cities.map((city) => (
-                  <tr key={city.id} className="border-t">
-                    <td className="px-4 py-2 text-sm text-gray-800">{city.name}</td>
-                    <td className="px-4 py-2 text-sm text-gray-800">{city.uf}</td>
-                    <td className="px-4 py-2 flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        title="Editar"
-                        onClick={() => handleEditCity(city)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        title="Excluir"
-                        onClick={() => handleDeleteCity(city.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
               </tbody>
             </table>
           </div>
@@ -322,29 +286,57 @@ export function CargoManagement() {
             </DialogContent>
           </Dialog>
 
-          {/* Diálogo para Edição de Cidade */}
-          <Dialog open={showEditCityDialog} onOpenChange={setShowEditCityDialog}>
-            <DialogContent className="sm:max-w-md">
+          {/* Diálogo para Edição de Cargo */}
+          <Dialog open={showEditCargoDialog} onOpenChange={setShowEditCargoDialog}>
+            <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Editar Cidade</DialogTitle>
-                <DialogDescription>Altere os dados da cidade e salve.</DialogDescription>
+                <DialogTitle>Editar Cargo</DialogTitle>
+                <DialogDescription>Altere os dados do cargo e salve.</DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleSaveEditCity} className="space-y-4">
+              <form onSubmit={handleSaveEditCargo} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-city-name">Nome da Cidade</Label>
+                  <Label htmlFor="edit-cargo-name">Nome do Cargo</Label>
                   <Input
-                    id="edit-city-name"
-                    value={editCityForm.name}
-                    onChange={e => setEditCityForm({ ...editCityForm, name: e.target.value })}
+                    id="edit-cargo-name"
+                    value={editCargoForm.name}
+                    onChange={e => {
+                      console.log("Alterando nome:", e.target.value);
+                      setEditCargoForm({ ...editCargoForm, name: e.target.value });
+                    }}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-city-uf">UF</Label>
+                  <Label htmlFor="edit-cargo-citie">Cidade</Label>
+                  <Select
+                    value={editCargoForm.citieId}
+                    onValueChange={value => {
+                      const selectedCity = cities.find((city) => city.id === value);
+                      setEditCargoForm({
+                        ...editCargoForm,
+                        citieId: value,
+                        uf: selectedCity ? selectedCity.uf : "",
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma cidade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cities.map((city) => (
+                        <SelectItem key={city.id} value={city.id}>
+                          {city.name} - {city.uf}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-cargo-uf">UF</Label>
                   <Input
-                    id="edit-city-uf"
-                    value={editCityForm.uf}
-                    onChange={e => setEditCityForm({ ...editCityForm, uf: e.target.value })}
+                    id="edit-cargo-uf"
+                    value={editCargoForm.uf}
+                    onChange={e => setEditCargoForm({ ...editCargoForm, uf: e.target.value })}
                     required
                   />
                 </div>
@@ -353,7 +345,7 @@ export function CargoManagement() {
                     type="button"
                     variant="outline"
                     className="flex-1 bg-transparent"
-                    onClick={() => setShowEditCityDialog(false)}
+                    onClick={() => setShowEditCargoDialog(false)}
                   >
                     Cancelar
                   </Button>

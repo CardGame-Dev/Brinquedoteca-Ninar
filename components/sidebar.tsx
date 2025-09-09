@@ -92,7 +92,7 @@ export function Sidebar() {
 							</li>
 							<li>
 								<Link
-									href="/cargomanagement" // Certifique-se de que o caminho está correto
+									href="/cargomanagement"
 									onClick={() => setOpen(false)}
 									className={cn(
 										"flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
@@ -103,6 +103,21 @@ export function Sidebar() {
 								>
 									<Briefcase className="h-4 w-4" />
 									Gerenciamento de Cargos
+								</Link>
+							</li>
+							<li>
+								<Link
+									href="/citiemanagement"
+									onClick={() => setOpen(false)}
+									className={cn(
+										"flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+										pathname === "/citiemanagement"
+											? "bg-primary text-primary-foreground"
+											: "text-muted-foreground hover:text-foreground hover:bg-muted",
+									)}
+								>
+									<Briefcase className="h-4 w-4" />
+									Gerenciamento de Cidades
 								</Link>
 							</li>
 						</>
