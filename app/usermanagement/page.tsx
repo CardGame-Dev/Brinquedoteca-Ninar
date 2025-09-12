@@ -5,7 +5,7 @@ import { LoginPage } from "@/components/login-page";
 import { UserManagement } from "@/components/user-management";
 
 export default function UserManagementPage() {
-  const { user, isAdmin, isLoading } = useAuth();
+  const { user, isAdminMaster, isAdminUnidade, isUser, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -22,7 +22,7 @@ export default function UserManagementPage() {
     return <LoginPage />;
   }
 
-  if (!isAdmin) {
+  if (!isAdminMaster) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground">Você não tem permissão para acessar esta página.</p>

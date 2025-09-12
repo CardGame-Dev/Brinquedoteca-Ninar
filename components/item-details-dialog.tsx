@@ -29,7 +29,7 @@ export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: I
   const [showMovementDetails, setShowMovementDetails] = useState(false);
   const [showUseDialog, setShowUseDialog] = useState(false);
   const [showReturnDialog, setShowReturnDialog] = useState(false);
-  const { user, isAdmin } = useAuth() || { user: null, isAdmin: false };
+  const { user, isAdminMaster, isAdminUnidade, isUser } = useAuth() || { user: null, isAdminMaster: false, isAdminUnidade: false, isUser: false };
 
   useEffect(() => {
     const fetchExtraInfo = async () => {
@@ -128,7 +128,6 @@ export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: I
       .eq("id", userId)
       .single();
 
-      console.log("Nome do usuário:", data?.name);
     if (error) {
       console.error("Erro ao buscar o nome do usuário:", error.message);
       return "Usuário desconhecido";
@@ -136,6 +135,9 @@ export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: I
 
     return data?.name || "Usuário desconhecido";
   };
+
+  // Exibe cidade apenas para adminMaster e adminUnidade
+  const canSeeCity = isAdminMaster || isAdminUnidade;
 
   return (
     <>
@@ -173,7 +175,7 @@ export function ItemDetailsDialog({ open, onOpenChange, item, onItemChanged }: I
                 {/*<p className="text-sm text-muted-foreground">
                   Categoria: <span className="font-medium text-foreground">{categoryName || "Carregando..."}</span>
                 </p> */}
-                {isAdmin && (
+                {canSeeCity && (
                   <p className="text-sm text-muted-foreground">
                     Cidade: <span className="font-medium text-foreground">{cityName || "Não informado"}</span>
                   </p>

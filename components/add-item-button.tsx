@@ -7,10 +7,10 @@ import { useState } from "react"
 import { AddItemDialog } from "./add-item-dialog"
 
 export function AddItemButton() {
-  const { isAdmin } = useAuth()
+  const { isAdminMaster, isAdminUnidade } = useAuth()
   const [showDialog, setShowDialog] = useState(false)
 
-  if (!isAdmin) {
+  if (!isAdminMaster && !isAdminUnidade) {
     return null
   }
 

@@ -105,10 +105,13 @@ export function LoginPage() {
             <p className="text-sm font-medium mb-2">Contas de teste:</p>
             <div className="text-xs space-y-1 text-muted-foreground">
               <p>
-                <strong>Admin:</strong> admin@brinquedoteca.com
+                <strong>Admin Unidade:</strong> adminunidade@brinquedoteca.com
               </p>
               <p>
-                <strong>Usuário:</strong> usuario@brinquedoteca.com
+                <strong>Admin Master:</strong> adminmaster@brinquedoteca.com
+              </p>
+              <p>
+                <strong>User:</strong> user@brinquedoteca.com
               </p>
               <p>
                 <strong>Senha:</strong> 123456

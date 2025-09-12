@@ -31,7 +31,7 @@ export interface Profile {
   id: string
   name: string
   email: string
-  role: "admin" | "user"
+  role: "adminMaster" | "adminUnidade" | "user" | undefined
   created_at: string
 }
 

@@ -14,7 +14,7 @@ interface User {
   id: string;
   name: string;
   email: string;
-  role: string;
+  role: "adminMaster" | "adminUnidade" | "user";
   position: string;
   citie: string; // UUID da cidade
 }
@@ -31,7 +31,7 @@ interface Cargo {
 }
 
 export function UserManagement() {
-  const { isAdmin } = useAuth() || { isAdmin: false };
+  const { isAdminMaster } = useAuth() || { isAdminMaster: false };
 
   const [users, setUsers] = useState<User[]>([]);
   const [cities, setCities] = useState<City[]>([]);
@@ -41,19 +41,19 @@ export function UserManagement() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    role: "",
+    role: "user",
     position: "",
     citieId: "",
   });
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isAdminMaster) {
       fetchUsers();
       fetchCities();
       fetchCargos();
     }
-  }, [isAdmin]);
+  }, [isAdminMaster]);
 
   const fetchUsers = async () => {
     try {
@@ -134,7 +134,7 @@ export function UserManagement() {
 
     setShowDialog(false);
     setEditUser(null);
-    setFormData({ name: "", email: "", role: "", position: "", citieId: "" });
+    setFormData({ name: "", email: "", role: "user", position: "", citieId: "" });
     fetchUsers();
   };
 
@@ -143,7 +143,7 @@ export function UserManagement() {
     setFormData({
       name: user.name || "",
       email: user.email || "",
-      role: user.role || "",
+      role: user.role || "user",
       position: user.position || "",
       citieId: user.citie || "",
     });
@@ -172,7 +172,7 @@ export function UserManagement() {
     setFormData({ ...formData, citieId: cityId });
   };
 
-  if (!isAdmin) {
+  if (!isAdminMaster) {
     return <p>Você não tem permissão para acessar esta página.</p>;
   }
 
@@ -239,7 +239,7 @@ export function UserManagement() {
         <Button
           onClick={() => {
             setEditUser(null);
-            setFormData({ name: "", email: "", role: "", position: "", citieId: "" });
+            setFormData({ name: "", email: "", role: "user", position: "", citieId: "" });
             setShowDialog(true);
           }}
           size="lg"
@@ -280,13 +280,18 @@ export function UserManagement() {
                 />
               </div>
               <div>
-                <Label htmlFor="role">Role</Label>
-                <Input
+                <Label htmlFor="role">Tipo de Usuário</Label>
+                <select
                   id="role"
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg p-2"
                   required
-                />
+                >
+                  <option value="adminMaster">Admin Master</option>
+                  <option value="adminUnidade">Admin Unidade</option>
+                  <option value="user">Usuário</option>
+                </select>
               </div>
               <div>
                 <Label htmlFor="position">Cargo</Label>

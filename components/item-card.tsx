@@ -3,14 +3,14 @@
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, RotateCcw, Edit, Trash2, Eye, Calendar, ArrowDownCircle } from "lucide-react";
+import { Play, Edit, Trash2, Eye, Calendar, ArrowDownCircle } from "lucide-react";
 import type { Item } from "@/lib/types";
 import { useAuth } from "@/lib/auth-context";
 import { useState, useEffect } from "react";
 import { UseItemDialog } from "./use-item-dialog";
 import { ReturnItemDialog } from "./return-item-dialog";
 import { ItemDetailsDialog } from "./item-details-dialog";
-import { EditItemDialog } from "./edit-item-dialog"; // Substituído AddItemDialog por EditItemDialog
+import { EditItemDialog } from "./edit-item-dialog";
 import { ReserveItemDialog } from "./reserve-item-dialog";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { supabase } from "@/lib/supabase/client";
@@ -23,8 +23,11 @@ interface ItemCardProps {
 
 export function ItemCard({ item, onItemChanged }: ItemCardProps) {
   const status = statusConfig[item.status] || { label: "Desconhecido", variant: "default", color: "bg-gray-500" };
-  const { user, isAdmin } = useAuth() || { user: null, isAdmin: false };
+  const { user, isAdminMaster, isAdminUnidade, isUser } = useAuth() || { user: null, isAdminMaster: false, isAdminUnidade: false, isUser: false };
   const isCurrentUserUsing = item.user_id && user?.id ? item.user_id === user.id : false;
+  const isAdmin = isAdminMaster || isAdminUnidade;
+
+  console.log("isAdminMaster || isAdminUnidade:", isAdmin); // <-- Adicione aqui
 
   const [showUseDialog, setShowUseDialog] = useState(false);
   const [showReturnDialog, setShowReturnDialog] = useState(false);
@@ -36,7 +39,6 @@ export function ItemCard({ item, onItemChanged }: ItemCardProps) {
   const [cityName, setCityName] = useState<string | null>(null);
 
   const handleDelete = async () => {
-    // Aqui faz a exclusão no Supabase
     await supabase.from("items").delete().eq("id", item.id);
     setShowDeleteDialog(false);
     if (onItemChanged) await onItemChanged();
@@ -76,7 +78,7 @@ export function ItemCard({ item, onItemChanged }: ItemCardProps) {
           >
             {item.image_url ? (
               <img
-                src={item.image_url || "/placeholder.svg"} // Use a URL salva ou um placeholder
+                src={item.image_url || "/placeholder.svg"}
                 alt={item.name}
                 className="w-full h-full object-cover"
               />
@@ -102,12 +104,11 @@ export function ItemCard({ item, onItemChanged }: ItemCardProps) {
               {status.label}
             </Badge>
 
-            {/* Nome da sala */}
             <p className="text-xs text-muted-foreground">
               Sala: {roomName || "Não especificada"}
             </p>
 
-            {/* Nome da cidade (apenas para admin) */}
+            {/* Nome da cidade (apenas para adminMaster ou adminUnidade) */}
             {isAdmin && (
               <p className="text-xs text-muted-foreground">
                 Cidade: {cityName || "Não especificada"}

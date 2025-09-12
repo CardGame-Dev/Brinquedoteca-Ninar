@@ -13,8 +13,10 @@ interface AuthContextType {
   signUp: (email: string, password: string, name: string, role?: string) => Promise<{ error: any }>
   signOut: () => Promise<void>
   isLoading: boolean
-  isAdmin: boolean
-  logout: () => void; // Adicione esta linha
+  isAdminMaster: boolean
+  isAdminUnidade: boolean
+  isUser: boolean
+  logout: () => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -58,21 +60,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const fetchProfile = async (userId: string) => {
-    console.log("Fetching profile for userId:", userId);
     try {
-      const { data, error } = await supabase.from("users").select("*").eq("id", userId).single();
-
-      if (error) {
-        console.error("Error fetching profile:", error.message, error.details, error.hint);
-        throw error;
-      }
-
-      console.log("Profile fetched:", data); // Verifique se o campo `role` está presente
-      setProfile(data);
+      const { data, error } = await supabase.from("users").select("*").eq("id", userId).single()
+      if (error) throw error
+      console.log("Perfil carregado:", data)
+      setProfile(data)
     } catch (error) {
-      console.error("Error fetching profile:", error);
+      console.log("Erro ao buscar perfil:", error) // <-- Adicione aqui
+      setProfile(null)
     }
-  };
+  }
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
@@ -88,10 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
       options: {
         emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || window.location.origin,
-        data: {
-          name,
-          role,
-        },
+        data: { name, role },
       },
     })
     return { error }
@@ -102,16 +96,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const logout = async () => {
-    await signOut();
-    window.location.href = "/login"; // ou "/" se preferir redirecionar para a home
-  };
+    await signOut()
+    window.location.href = "/login"
+  }
 
-  const isAdmin = profile?.role === "admin"
-  console.log("Usuário:", user);
-  console.log("É administrador:", isAdmin);
-  console.log("AuthContext - User:", user);
-  console.log("AuthContext - Profile:", profile);
-  console.log("AuthContext - Is Admin:", isAdmin);
+  // Flags de permissão
+  const isAdminMaster = profile?.role === "adminMaster"
+  const isAdminUnidade = profile?.role === "adminUnidade"
+  const isUser = profile?.role === "user"
 
   return (
     <AuthContext.Provider value={{
@@ -121,8 +113,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signUp,
       signOut,
       isLoading,
-      isAdmin,
-      logout // adicione aqui
+      isAdminMaster,
+      isAdminUnidade,
+      isUser,
+      logout
     }}>
       {children}
     </AuthContext.Provider>

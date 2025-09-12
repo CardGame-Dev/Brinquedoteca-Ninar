@@ -29,11 +29,17 @@ export function LibraryHeader({
 }: LibraryHeaderProps) {
 
   const [showFilters, setShowFilters] = useState(false)
-  const { user, profile, logout, isAdmin } = useAuth()
+  const { user, profile, logout, isAdminMaster, isAdminUnidade, isUser } = useAuth()
 
   const handleRefresh = () => {
     window.location.reload()
   }
+
+  // Define o texto do tipo de usuário
+  let userType = "Usuário"
+  if (isAdminMaster) userType = "Admin Master"
+  else if (isAdminUnidade) userType = "Admin Unidade"
+  else if (isUser) userType = "Usuário"
 
   return (
     <header className="sticky top-0 z-10 bg-background border-b border-border">
@@ -64,7 +70,7 @@ export function LibraryHeader({
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium">{profile?.name}</p>
                   <p className="text-xs text-muted-foreground">{user?.email}</p>
-                  <p className="text-xs text-muted-foreground">{isAdmin ? "Administrador" : "Usuário"}</p>
+                  <p className="text-xs text-muted-foreground">{userType}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
