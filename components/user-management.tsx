@@ -16,7 +16,7 @@ interface User {
   email: string;
   role: "adminMaster" | "adminUnidade" | "user";
   position: string;
-  citie: string; // UUID da cidade
+  city_id: string; // UUID da cidade
 }
 
 interface City {
@@ -43,7 +43,7 @@ export function UserManagement() {
     email: "",
     role: "user",
     position: "",
-    citieId: "",
+    cityId: "",
   });
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -110,7 +110,7 @@ export function UserManagement() {
           email: formData.email,
           role: formData.role,
           position: formData.position,
-          citie: formData.citieId,
+          city_id: formData.cityId,
         })
         .eq("id", editUser.id);
 
@@ -124,7 +124,7 @@ export function UserManagement() {
           email: formData.email,
           role: formData.role,
           position: formData.position,
-          citie: formData.citieId,
+          city_id: formData.cityId,
         },
       ]);
       if (error) {
@@ -134,7 +134,7 @@ export function UserManagement() {
 
     setShowDialog(false);
     setEditUser(null);
-    setFormData({ name: "", email: "", role: "user", position: "", citieId: "" });
+    setFormData({ name: "", email: "", role: "user", position: "", cityId: "" });
     fetchUsers();
   };
 
@@ -145,7 +145,7 @@ export function UserManagement() {
       email: user.email || "",
       role: user.role || "user",
       position: user.position || "",
-      citieId: user.citie || "",
+      cityId: user.city_id || "",
     });
     setShowDialog(true);
   };
@@ -169,7 +169,7 @@ export function UserManagement() {
   };
 
   const handleCityChange = (cityId: string) => {
-    setFormData({ ...formData, citieId: cityId });
+    setFormData({ ...formData, cityId: cityId });
   };
 
   if (!isAdminMaster) {
@@ -202,14 +202,14 @@ export function UserManagement() {
             </thead>
             <tbody>
               {users.map((user) => {
-                const city = cities.find((c) => c.id === user.citie);
+                const city = cities.find((c) => c.id === user.city_id);
                 return (
                   <tr key={user.id} className="border-t">
                     <td className="px-4 py-2 text-sm text-gray-800">{user.name}</td>
                     <td className="px-4 py-2 text-sm text-gray-800">{user.email}</td>
                     <td className="px-4 py-2 text-sm text-gray-800">{user.role}</td>
                     <td className="px-4 py-2 text-sm text-gray-800">{user.position}</td>
-                    <td className="px-4 py-2 text-sm text-gray-800">{city ? city.name : user.citie}</td>
+                    <td className="px-4 py-2 text-sm text-gray-800">{city ? city.name : user.city_id}</td>
                     <td className="px-4 py-2 flex gap-2">
                       <Button
                         size="sm"
@@ -239,7 +239,7 @@ export function UserManagement() {
         <Button
           onClick={() => {
             setEditUser(null);
-            setFormData({ name: "", email: "", role: "user", position: "", citieId: "" });
+            setFormData({ name: "", email: "", role: "user", position: "", cityId: "" });
             setShowDialog(true);
           }}
           size="lg"
@@ -311,10 +311,10 @@ export function UserManagement() {
                 </select>
               </div>
               <div>
-                <Label htmlFor="citie">Cidade</Label>
+                <Label htmlFor="city">Cidade</Label>
                 <select
-                  id="citie"
-                  value={formData.citieId}
+                  id="city"
+                  value={formData.cityId}
                   onChange={(e) => handleCityChange(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg p-2"
                   required

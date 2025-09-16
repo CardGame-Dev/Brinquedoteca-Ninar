@@ -32,6 +32,8 @@ export interface Profile {
   name: string
   email: string
   role: "adminMaster" | "adminUnidade" | "user" | undefined
+  position?: string
+  city_id?: string
   created_at: string
 }
 
